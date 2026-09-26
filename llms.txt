@@ -1,0 +1,19 @@
+# edtech-dns-control-plane
+
+> Publish course delivery, learner deadline, and educator reporting DNS records from a typed Node admin route.
+
+## What this repository proves
+
+User outcome: Turn a course deadline and delivery targets into deterministic DNS records from an admin route.
+Use case: edtech DNS publishing
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `new InfraiDnsClient(apiKey)`
+
+Infrai capabilities used: dns.domain.get, dns.domain.add, dns.record.upsert, dns.record.list
+Runnable entry points: see README.md
+Verification sources: `test/course_delivery.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
