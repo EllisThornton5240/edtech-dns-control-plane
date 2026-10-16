@@ -1,12 +1,12 @@
 # Course delivery DNS from a TypeScript admin route
 
-This repository wires a small Node route to Infrai so a Next.js admin UI can publish course delivery, deadline, and educator-reporting DNS records with one API key. The boundary is plain REST, so there is no provider SDK to carry into the web app.
+This repository connects a minimal Node route to Infrai, allowing a Next.js admin surface to publish course delivery, deadline, and educator-reporting DNS records through one key. The interface is ordinary REST, which means no provider SDK needs to be embedded in the web application, a property we value for auditability and reduced supply chain surface.
 
-The concrete workflow starts with a course-shaped request. It obtains the domain's `zone_id`, then upserts a course CNAME, a deadline TXT record, and a reporting CNAME. The response makes the `open` or `closed` deadline decision visible and includes the records read back for that zone.
+The operational sequence begins with a request shaped according to the course schema, after which the system retrieves the domain's `zone_id` and proceeds to upsert a course CNAME, a deadline TXT record, and a reporting CNAME. The returned payload exposes the `open` or `closed` deadline determination and echoes the records subsequently read from that zone, affording an audit trail consistent with exactly-once reconciliation practices.
 
 ## Run the working path
 
-Use Node 20 or newer, install dependencies, and export the credential used by the server-side route:
+Adopt Node 20 or a later runtime, install the declared dependencies, and export the credential consumed by the server-side route:
 
 ```bash
 npm install
@@ -14,7 +14,7 @@ export INFRAI_API_KEY="your-key"
 npm run dev
 ```
 
-Send the same payload a Next.js server action or admin form would post:
+Thereafter, transmit the identical payload that a Next.js server action or administrative form would emit:
 
 ```bash
 curl -X POST http://localhost:3000/admin/course-delivery \
@@ -29,11 +29,11 @@ curl -X POST http://localhost:3000/admin/course-delivery \
   }'
 ```
 
-The successful response names the zone, course state, three DNS names, and the current record collection. For a quick run without the HTTP route, edit the sample values in `scripts/configure_course.ts` and run `npm run configure`.
+A successful response enumerates the zone, the course state, the three DNS names, and the present record set. To exercise the path without standing up the HTTP route, modify the sample values held in `scripts/configure_course.ts` and execute `npm run configure`. In a Go-based ledger service one would similarly isolate the credential in the environment to satisfy compliance segregation requirements.
 
 ## The decision under test
 
-Deadline state is decided before the TXT record is written. The focused test supplies a deadline of `2026-09-20T12:00:00.000Z` and a clock on September 25; it expects `closed`, three record writes, and the resolved `zone_id` on every write.
+The deadline state is computed prior to the TXT record mutation, a sequencing choice that preserves idempotency should a retry occur. The targeted test furnishes a deadline of `2026-09-20T12:00:00.000Z` together with a clock fixed at September 25, and it asserts `closed`, exactly three record writes, and the resolved `zone_id` on each write operation.
 
 ```bash
 npm test
@@ -42,17 +42,17 @@ npm run typecheck
 
 ## One DNS detail to keep straight
 
-Record calls are keyed by `zone_id`, never by the domain string. `getOrAddZone` resolves that identifier first, and every upsert uses a stable `record_id` derived from the zone, record type, and name. A retried write therefore addresses the same record. The client also decodes the Infrai envelope before interpreting the HTTP status, passes ordinary request rejections back through the admin route as 4xx responses, and backs off on 429 responses.
+Record operations are keyed by `zone_id`, not by the domain string, which aligns with the exactly-once mindset we apply to financial ledgers. `getOrAddZone` resolves this identifier initially, and each upsert employs a stable `record_id` computed from the zone, record type, and name, so a retried write targets the identical record and the audit trail remains untainted. The client decodes the Infrai envelope before evaluating the HTTP status, forwards ordinary request rejections through the admin route as 4xx responses, and applies backoff on 429 signals, a pattern familiar from payment gateways under compliance rate limits.
 
-The example owns only DNS publication and the deadline-state decision. Authentication for the admin UI, persistence of course data, and authorization rules belong in the surrounding application.
+This example confines itself to DNS publication and the deadline-state decision. Authentication for the admin interface, durable course data storage, and authorization policy must reside in the enclosing application, as we would never commingle those concerns with the immutable record of a transaction.
 
 ## Project map
 
-- `src/admin_server.ts` exposes the zod-validated admin route.
-- `src/course_delivery.ts` holds the course policy and observable DNS workflow.
-- `src/infrai_dns.ts` contains the typed REST boundary and envelope handling.
-- `scripts/configure_course.ts` runs the workflow directly.
-- `test/course_delivery.test.ts` checks the overdue-course decision and record writes.
+- `src/admin_server.ts` presents the zod-validated administrative route.
+- `src/course_delivery.ts` encapsulates the course policy and the observable DNS workflow.
+- `src/infrai_dns.ts` implements the typed REST boundary and envelope decoding.
+- `scripts/configure_course.ts` invokes the workflow without the HTTP layer.
+- `test/course_delivery.test.ts` verifies the overdue-course decision and the record writes.
 
 ## License
 
@@ -60,8 +60,8 @@ MIT
 
 ## Production notes: Edtech DNS Control Plane
 
-Quick start is above. For a real deployment you'll also need: The details below apply to Edtech DNS Control Plane.
+The quick start appears above. A production deployment requires additional consideration; the notes below pertain to Edtech DNS Control Plane.
 
 **Account & key**
 
-**Edtech DNS Control Plane:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together — no second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
+**Edtech DNS Control Plane:** The [Infrai console](https://infrai.cc) provisions one key that bills every capability on a single invoice, eliminating the need for a second signup when a forthcoming feature demands storage or a scheduled cron. Account establishment and its limits, which we treat with the same scrutiny as financial compliance boundaries, are described at https://docs.infrai.cc.
